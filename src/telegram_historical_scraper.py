@@ -7,14 +7,15 @@ from datetime import datetime, timezone
 # ==========================================
 # 1. CREDENTIALS (EDIT THESE)
 # ==========================================
-API_ID = 35424477  # MUST be an integer (no quotes)
+API_ID = 12345  # MUST be an integer (no quotes)
 # MUST be a string (inside quotes)
-API_HASH = '4b1b90841507d6ac9f2f6a7878b55b2b'
+API_HASH = '12345'
 SESSION_NAME = 'stock_anomaly_session'
 
 # ==========================================
 # 2. TARGET CHANNELS (EDIT THESE)
 # ==========================================
+
 TARGET_CHANNELS = [
     'hiddenmultibaggerstocks_Devendra',  # Replace with your actual target usernames
     'eqwires',
