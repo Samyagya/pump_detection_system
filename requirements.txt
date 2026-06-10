@@ -8,3 +8,5 @@ scikit-learn
 streamlit
 plotly
 telethon
+optuna
+requests

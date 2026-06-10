@@ -55,7 +55,7 @@ def fetch_historical_ohlcv(ticker, start_date, end_date, max_retries=3):
             
             if is_rate_limit and attempt < max_retries - 1:
                 wait_seconds = float((2 ** attempt) * 4)
-                print(f"    [Rate Limit] {ticker} throttling detected. Pausing for {wait_seconds:.4f} seconds before retry...")
+                print(f"[Rate Limit] {ticker} throttling detected. Pausing for {wait_seconds:.4f} seconds before retry...")
                 time.sleep(wait_seconds)
             else:
                 print(f"[ERROR] Complete pipeline failure fetching {ticker} on attempt {float(attempt + 1):.4f}: {str(e)}")
