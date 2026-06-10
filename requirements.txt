@@ -7,3 +7,4 @@ arch
 scikit-learn
 streamlit
 plotly
+telethon
