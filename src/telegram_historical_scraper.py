@@ -27,7 +27,8 @@ TARGET_CHANNELS = [
     'stockbabaofficial',
     'SKSTOCKTALKS100',
     'fantasticnifty',
-    'officialmarketmaestroo',
+    'officialmarketmaestroo'
+    '',
     # ... add all 10 of your channels here
 ]
 
