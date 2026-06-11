@@ -1,6 +1,6 @@
 # 🤝 Team Collaboration Guide
-**Project:** Pulse-Driven Supply Chain Agent
-**Repository:** `tableau-agent`
+**Project:** Anomaly detection in penny stocks of indian market by using GARCH, FinBERT and Isolation Forest
+**Repository:** `pump-detection-system`
 
 ---
 
@@ -16,7 +16,7 @@ Before writing any code, ensure your local environment is safe.
 
 1. **Clone the Repo:**
    ```bash
-   git clone https://github.com/YOUR_USERNAME/tableau-agent.git
+   git clone https://github.com/YOUR_USERNAME/pump-detection-system.git
 
 2. **Check the Safety Net:** Ensure the file `.gitignore` exists in the root folder. This prevents you from accidentally uploading passwords, virtual environments (`venv`), or junk files.
 
