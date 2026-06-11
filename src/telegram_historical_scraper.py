@@ -28,6 +28,17 @@ TARGET_CHANNELS = [
     'SKSTOCKTALKS100',
     'fantasticnifty',
     'officialmarketmaestroo',
+    'Stock_Market_Metrix',
+    'Mahaveerwealth',
+    'optionmarketgyaan',
+    'FTUchart',
+    'Stock_Market_NewsUpdates',
+    'investeader143',
+    'Stock_aaj_or_kal',
+    'Tradewithswapnil550',
+    'Capital_Market_Research',
+    'thetradingangle',
+    '',
     # ... add all 10 of your channels here
 ]
 
