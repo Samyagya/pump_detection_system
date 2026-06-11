@@ -10,3 +10,4 @@ plotly
 telethon
 optuna
 requests
+arch
