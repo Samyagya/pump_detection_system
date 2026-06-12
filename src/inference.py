@@ -41,16 +41,16 @@ def main():
     
     # 1. Initialize with Optuna's exact findings
     model = IsolationForest(
-        contamination=0.1150,
-        n_estimators=220,
-        max_samples=0.2500,
+        contamination=0.1000,
+        n_estimators=70,
+        max_samples=0.7,
         random_state=42,
         n_jobs=-1
     )
     
     # 2. Fit the model and predict anomalies
     X = master_df[feature_cols].copy()
-    print("[INFO] Building 220.0000 isolation trees and scoring universe...")
+    print("[INFO] Building 70 isolation trees and scoring universe...")
     master_df['Anomaly_Flag'] = model.fit_predict(X)
     
     # 3. Calculate Anomaly Severity Score for ALL rows

@@ -11,3 +11,4 @@ telethon
 optuna
 requests
 arch
+jugaad_data

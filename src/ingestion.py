@@ -1,3 +1,5 @@
+#import dependencies
+
 import os
 import sys
 import datetime
@@ -6,17 +8,18 @@ import pandas as pd
 import numpy as np
 import yfinance as yf
 
+
+# Determines the stocks which need to be downloaded by the pipeline, determined by reading the CSV "stratified_training universe"
 def get_ticker_universe(csv_path="stratified_training_universe.csv"):
-    """
-    Dynamically loads the stratified training universe CSV generated in Stage 2.
-    Extracts tickers from the 'symbol' column and formats them with the required '.NS' suffix.
-    """
+
+    # Check if the file already exists or not. If not then give error, if exists then read it
     print(f"[INFO] Loading target training universe from: {csv_path}")
     if not os.path.exists(csv_path):
         print(f"[ERROR] Critical universe file missing: '{csv_path}' not found in the current directory.")
         print("[ERROR] Please verify that 'Filtering_penny_stock.py' ran successfully.")
         sys.exit(1)
-        
+    
+    # File exists; extracting the tickers from the 'symbol' column. Also format them with .NS for NSE and yahoo finance compatibility.
     try:
         df = pd.read_csv(csv_path)
         if "symbol" not in df.columns:
@@ -30,44 +33,51 @@ def get_ticker_universe(csv_path="stratified_training_universe.csv"):
         tickers = [f"{sym}.NS" if not sym.endswith(".NS") else sym for sym in symbols]
         print(f"[SUCCESS] Parsed {float(len(tickers)):.4f} unique tickers from universe matrix.")
         return tickers
+    
+    # File exists but was not readable
     except Exception as e:
         print(f"[ERROR] Failed to read universe CSV asset: {str(e)}")
         sys.exit(1)
 
+
+
+
+
+# Isolate API calls to yfinance. Number of attempts = 3, incase of unstable internet connection.
 def fetch_historical_ohlcv(ticker, start_date, end_date, max_retries=3):
-    """
-    Fetches daily OHLCV historical time-series data from Yahoo Finance for a given ticker.
-    Implements transient network failure retries and rate limit handling.
-    """
     print(f"[INFO] Fetching 3-year historical data for {ticker}...")
     for attempt in range(max_retries):
         try:
             stock = yf.Ticker(ticker)
             df = stock.history(start=start_date, end=end_date, interval="1d")
             
+
+            # If empty or less than 5 days of data, we skip cause no use.
             if df.empty or len(df) < 5:
                 print(f"[WARNING] Empty data matrix or insufficient history returned for: {ticker}")
                 return None
             return df
+        
+        # Error handling: possible that we hit the rate since we are making so many calls. Detecting such errors by checking for terms like '429' or 'rate' or 'throttl' in the error message. Rate limit error means that we wait for 4 or 8 seconds and then try again.
+
         except Exception as e:
             err_msg = str(e).lower()
             is_rate_limit = any(k in err_msg for k in ["429", "rate", "throttl", "too many"])
             
+            # Waiting period
             if is_rate_limit and attempt < max_retries - 1:
                 wait_seconds = float((2 ** attempt) * 4)
                 print(f"[Rate Limit] {ticker} throttling detected. Pausing for {wait_seconds:.4f} seconds before retry...")
                 time.sleep(wait_seconds)
             else:
+                # Could not fetch data even after 4 and 8 seconds of waiting. So no use. 
                 print(f"[ERROR] Complete pipeline failure fetching {ticker} on attempt {float(attempt + 1):.4f}: {str(e)}")
                 break
     return None
 
+
+# Need delivery percentage, but yfinance does not have it so for now we have to use random numbers bounded by 0.1 and 0.7. Data available 
 def inject_delivery_data(df):
-    """
-    Simulates daily delivery volume percentages matching standard 
-    Indian market structural behavior to support downstream features.
-    Returns values strictly adhering to the 4-decimal place specification.
-    """
     np.random.seed(42)
     low_bound = 0.1000
     high_bound = 0.7000
@@ -87,7 +97,7 @@ def main():
     raw_data_dir = os.path.join("data", "raw")
     os.makedirs(raw_data_dir, exist_ok=True)
     
-    successful_fetches = 0.0000
+    successful_fetches = 0
     total_tickers = float(len(tickers))
     
     print(f"\n[START] Initializing massive data download pipeline for {total_tickers:.4f} assets...")
