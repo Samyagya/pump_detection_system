@@ -2,17 +2,17 @@ import os
 import pandas as pd
 import numpy as np
 
+
+# The raw data extracted from yfinance needs to be cleaned. This function cleans it
 def clean_financial_data(df):
-    """
-    Cleans raw OHLCV data by de-localizing timezones, handling suspensions, 
-    pruning redundant columns, and enforcing 4-decimal precision.
-    """
-    # 1. Timezone De-localization of the Temporal Index
+
+    # 1. Timezone De-localization
     if 'Date' in df.columns:
         df['Date'] = pd.to_datetime(df['Date'], utc=True).dt.tz_localize(None)
         df['Date'] = df['Date'].dt.strftime('%Y-%m-%d')
     
-    # 2. Handling Suspensions and Circuit Locks
+    # 2. Handling Suspensions and Circuit Locks (0 trading days)
+
     # Forward-fill prices to maintain the last known valuation on non-trading days
     price_cols = ['Open', 'High', 'Low', 'Close']
     for col in price_cols:
@@ -37,6 +37,7 @@ def clean_financial_data(df):
             df[col] = df[col].apply(lambda x: f"{x:.4f}")
 
     return df
+
 
 def main():
     raw_dir = os.path.join("data", "raw")

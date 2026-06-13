@@ -6,11 +6,10 @@ import warnings
 # Suppress pandas fragmentation and rolling calculation warnings
 warnings.filterwarnings('ignore')
 
+
+# Calculated gini coefficient - volume inequality measure over a rolling period of time, closer to 1 means volume concentration -> manipulation 
+
 def calculate_gini(v):
-    """
-    Calculates the Gini Coefficient for a rolling window of volumes.
-    A score near 1.0000 indicates extreme volume concentration (manipulation).
-    """
     v = np.sort(v)
     n = len(v)
     if n == 0 or np.sum(v) == 0: 
@@ -18,49 +17,53 @@ def calculate_gini(v):
     index = np.arange(1, n + 1)
     return (np.sum((2 * index - n - 1) * v)) / (n * np.sum(v))
 
+
+# Calculates the other features
 def calculate_optimized_features(df):
     """
     Computes the 11 strictly orthogonal features designed to compress 
     time-series mechanics into static spatial coordinates for the Isolation Forest.
     """
-    # 1. The Foundation: Daily Logarithmic Return
+
+    # 1. Daily Logarithmic Return -> basic
     df['Log_Return'] = np.log(df['Close'] / df['Close'].shift(1))
     
-    # 2. The Activity Signal: Volume Shock Ratio (20-Day)
+    # 2. Volume Shock Ratio (20-Day) -> activity signa
     df['Vol_MA20'] = df['Volume'].rolling(window=20).mean()
     df['Vol_Shock_Ratio'] = df['Volume'] / (df['Vol_MA20'] + 1e-9)
     
-    # 3. The Intraday Battle: Normalized High-Low Spread
+    # 3. Normalized High-Low Spread -> intraday
     df['Norm_Spread'] = (df['High'] - df['Low']) / df['Close']
     
-    # 4. The Operator Footprint: Amihud Illiquidity Ratio
+    # 4. Amihud Illiquidity Ratio -> price impact per unit of volume
     df['Rupee_Volume'] = df['Close'] * df['Volume']
     df['Amihud_Ratio'] = df['Log_Return'].abs() / (df['Rupee_Volume'] + 1e-9)
     
-    # 5. The Wash Trade Trap: Delivery-Volume Divergence
+    # 5. Delivery-Volume Divergence -> wash trading check
     df['Delivery_Divergence'] = df['Vol_Shock_Ratio'] * (1.0000 - df['Delivery_Percentage'])
     
-    # 6. The Temporal Springboard: Volatility Squeeze (10D vs 90D)
+    # 6. Volatility Squeeze (10D vs 90D) -> conpares
     df['Vol_10D'] = df['Log_Return'].rolling(window=10).std()
     df['Vol_90D'] = df['Log_Return'].rolling(window=90).std()
     df['Volatility_Squeeze'] = df['Vol_10D'] / (df['Vol_90D'] + 1e-9)
     
-    # 7. The Unnatural Climb: Consecutive Positive Streak
+    # 7. Consecutive Positive Streak -> how many continuous days the stock climbed
     is_positive = (df['Log_Return'] > 0.0000).astype(int)
     # Blocks increment every time we hit a day that is NOT positive
     blocks = (~(df['Log_Return'] > 0.0000)).cumsum()
     df['Positive_Streak'] = is_positive.groupby(blocks).cumsum()
     
-    # 8. The Asymmetric Tail: Rolling Return Skewness (20-Day)
+    # 8. Rolling Return Skewness (20-Day) -> measures asymetry
     df['Return_Skewness'] = df['Log_Return'].rolling(window=20).skew()
     
-    # 9. The Overnight Trap: Gap-Up Momentum
+    # 9. Gap-Up Momentum -> overnight changes
     df['Gap_Up_Momentum'] = (df['Open'] - df['Close'].shift(1)) / df['Close'].shift(1)
     
-    # 10. The Coordinated Blast: Volume Gini Coefficient (20-Day)
+    # 10. Volume Gini Coefficient (20-Day) -> feeds data to gini calculator
     df['Volume_Gini_20D'] = df['Volume'].rolling(window=20).apply(calculate_gini, raw=True)
     
     # 11. The Hidden Accumulation: OBV Acceleration
+
     # Calculate daily OBV flow
     obv_flow = np.sign(df['Log_Return']) * df['Volume']
     df['OBV'] = obv_flow.cumsum()
@@ -69,15 +72,14 @@ def calculate_optimized_features(df):
     df['OBV_Std20'] = df['OBV'].rolling(window=20).std()
     df['OBV_Acceleration'] = (df['OBV'] - df['OBV_MA20']) / (df['OBV_Std20'] + 1e-9)
 
-    # ---------------------------------------------------------
+
     # VALIDATION TARGET (For Optuna Only)
-    # ---------------------------------------------------------
+
     df['Forward_Min_20D'] = df['Close'].shift(-20).rolling(window=20).min()
     df['Max_Drawdown_20D'] = df['Forward_Min_20D'] / df['Close'] - 1.0000
 
-    # ---------------------------------------------------------
     # CLEANUP & FORMATTING
-    # ---------------------------------------------------------
+
     # Define the exact columns to keep
     features_to_keep = [
         'Date', 'Close', 'Log_Return', 'Vol_Shock_Ratio', 'Norm_Spread', 
