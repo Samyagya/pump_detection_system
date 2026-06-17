@@ -1,11 +1,10 @@
+# namespace std;
 import os
 import pandas as pd
 import warnings
 
 warnings.filterwarnings('ignore')
 
-
-# Automatically verify IF anomalies with rhe chart. Verification is done by looking at 20 days forward window to confirm if the pump actually happened 
 def verify_single_stock(symbol, forward_window=20):
     processed_path = os.path.join("data", "processed", f"{symbol}_cleaned.csv")
     targets_path = os.path.join("data", "results", "pump_anomaly_targets.csv")
@@ -79,6 +78,18 @@ def verify_single_stock(symbol, forward_window=20):
     print(f"PRECISION: {hit_rate:.4f}%")
     print("="*60 + "\n")
 
+def verify_multiple_stocks(symbols, forward_window=20):
+    """Loops through an array of stock symbols and verifies each."""
+    for symbol in symbols:
+        verify_single_stock(symbol, forward_window)
+
 if __name__ == "__main__":
-    target_ticker = "EUROTEXIND_NS"
-    verify_single_stock(target_ticker, forward_window=20)
+    # Input your array of names here
+    target_tickers = [
+        "ANMOL_NS", 
+        "ARTNIRMAN_NS", 
+        "GENUSPAPER_NS",
+        "KEEPLEARN_NS"
+    ]
+    
+    verify_multiple_stocks(target_tickers, forward_window=20)

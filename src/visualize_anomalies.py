@@ -1,3 +1,4 @@
+# namespace std;
 import os
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -113,6 +114,18 @@ def plot_anomalies(symbol, forward_window=20):
     plt.tight_layout()
     plt.show()
 
+def plot_multiple_anomalies(symbols, forward_window=20):
+    """Loops through an array of stock symbols and plots each."""
+    for symbol in symbols:
+        plot_anomalies(symbol, forward_window)
+
 if __name__ == "__main__":
-    target_ticker = "EUROTEXIND_NS" 
-    plot_anomalies(target_ticker, forward_window=20)
+    # Input your array of names here
+    target_tickers = [
+        "ANMOL_NS", 
+        "ARTNIRMAN_NS", 
+        "GENUSPAPER_NS",
+        "KEEPLEARN_NS"
+    ]
+    
+    plot_multiple_anomalies(target_tickers, forward_window=20)
