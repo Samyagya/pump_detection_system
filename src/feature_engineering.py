@@ -20,11 +20,6 @@ def calculate_gini(v):
 
 # Calculates the other features
 def calculate_optimized_features(df):
-    """
-    Computes the 11 strictly orthogonal features designed to compress 
-    time-series mechanics into static spatial coordinates for the Isolation Forest.
-    """
-
     # 1. Daily Logarithmic Return -> basic
     df['Log_Return'] = np.log(df['Close'] / df['Close'].shift(1))
     
