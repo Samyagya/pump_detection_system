@@ -3,29 +3,17 @@ import pandas as pd
 from sklearn.ensemble import IsolationForest
 import warnings
 
-warnings.filterwarnings('ignore')
+# Import the optimization engine directly from your sibling file
+from isolation_forest import load_master_matrix, find_best_parameters
 
-def load_master_matrix(features_dir):
-    """Loads the global feature matrix."""
-    all_data = []
-    for filename in os.listdir(features_dir):
-        if filename.endswith("_features.csv"):
-            filepath = os.path.join(features_dir, filename)
-            df = pd.read_csv(filepath)
-            for col in df.columns:
-                if col != 'Date':
-                    df[col] = df[col].astype(float)
-            df['Symbol'] = filename.split("_features")[0]
-            all_data.append(df)
-            
-    master_df = pd.concat(all_data, ignore_index=True)
-    return master_df.dropna().reset_index(drop=True)
+warnings.filterwarnings('ignore')
 
 def main():
     features_dir = os.path.join("data", "features")
     results_dir = os.path.join("data", "results")
     os.makedirs(results_dir, exist_ok=True)
     
+    # 1. Load the unified data matrix
     master_df = load_master_matrix(features_dir)
     
     feature_cols = [
@@ -35,48 +23,45 @@ def main():
         'Volume_Gini_20D', 'OBV_Acceleration'
     ]
     
+    # 2. Run Optuna search behind the scenes to capture live optimal hyperparameters
+    best_params = find_best_parameters(master_df, feature_cols)
+    
     print("\n" + "="*60)
-    print("DEPLOYING OPTIMIZED ISOLATION FOREST")
+    print("DEPLOYING MODEL WITH LIVE TUNED PARAMETERS")
     print("="*60)
     
-    # 1. Initialize with Optuna's exact findings
+    # 3. Initialize model using the dynamic parameter dictionary unpacker
     model = IsolationForest(
-        contamination=0.120,
-        n_estimators=220,
-        max_samples=0.300,
+        contamination=best_params['contamination'],
+        n_estimators=int(best_params['n_estimators']),
+        max_samples=best_params['max_samples'],
         random_state=42,
         n_jobs=-1
     )
     
-    # 2. Fit the model and predict anomalies
+    # 4. Fit the model and extract continuous scoring metrics
     X = master_df[feature_cols].copy()
-    print("[INFO] Building 220.0000 isolation trees and scoring universe...")
+    print(f"[INFO] Building {float(best_params['n_estimators']):.4f} isolation trees across universe...")
     master_df['Anomaly_Flag'] = model.fit_predict(X)
-    
-    # 3. Calculate Anomaly Severity Score for ALL rows
     master_df['Anomaly_Score'] = model.decision_function(X)
     
-    # Sort everything so the most dangerous scores (negative) are at the top, 
-    # and normal scores (positive) are at the bottom.
+    # Sort with highest anomaly profile at the top
     master_df = master_df.sort_values(by='Anomaly_Score', ascending=True)
     
-    # Reorder columns for readability
+    # Structure presentation view
     front_cols = ['Symbol', 'Date', 'Anomaly_Score', 'Max_Drawdown_20D']
     back_cols = [c for c in master_df.columns if c not in front_cols and c != 'Anomaly_Flag']
     master_df = master_df[front_cols + back_cols]
     
-    # 4. Format all outputs to exactly 4.0000 decimal places
+    # Format precision to 4 decimal points
     for col in master_df.columns:
         if col not in ['Date', 'Symbol']:
             master_df[col] = master_df[col].apply(lambda x: f"{float(x):.4f}")
     
-    # 5. Create the two distinct CSV files
-    # File 1: The full universe (What you just requested)
+    # 5. Export structural datasets
     full_out_path = os.path.join(results_dir, "full_universe_scores.csv")
     master_df.to_csv(full_out_path, index=False)
     
-    # File 2: The filtered targeted hit-list (Score < 0.0000)
-    # Since we formatted the columns to strings, we need to convert Anomaly_Score back to float to filter
     anomalies_df = master_df[master_df['Anomaly_Score'].astype(float) < 0.0000].copy()
     hitlist_out_path = os.path.join(results_dir, "pump_anomaly_targets.csv")
     anomalies_df.to_csv(hitlist_out_path, index=False)
