@@ -86,10 +86,7 @@ def verify_multiple_stocks(symbols, forward_window=20):
 if __name__ == "__main__":
     # Input your array of names here
     target_tickers = [
-        "ANMOL_NS", 
-        "ARTNIRMAN_NS", 
-        "GENUSPAPER_NS",
-        "KEEPLEARN_NS"
+        "EUROTEXIND_NS"
     ]
     
     verify_multiple_stocks(target_tickers, forward_window=20)

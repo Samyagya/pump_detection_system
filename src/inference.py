@@ -41,9 +41,9 @@ def main():
     
     # 1. Initialize with Optuna's exact findings
     model = IsolationForest(
-        contamination=0.1150,
+        contamination=0.120,
         n_estimators=220,
-        max_samples=0.2500,
+        max_samples=0.300,
         random_state=42,
         n_jobs=-1
     )

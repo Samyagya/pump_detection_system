@@ -12,3 +12,4 @@ optuna
 requests
 arch
 matplotlib
+jugaad-data

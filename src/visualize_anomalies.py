@@ -122,10 +122,7 @@ def plot_multiple_anomalies(symbols, forward_window=20):
 if __name__ == "__main__":
     # Input your array of names here
     target_tickers = [
-        "ANMOL_NS", 
-        "ARTNIRMAN_NS", 
-        "GENUSPAPER_NS",
-        "KEEPLEARN_NS"
+        "EUROTEXIND_NS"
     ]
     
     plot_multiple_anomalies(target_tickers, forward_window=20)
