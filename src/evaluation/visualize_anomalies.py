@@ -1,4 +1,3 @@
-# namespace std;
 import os
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -27,6 +26,8 @@ def plot_anomalies(symbol, forward_window=20):
     # Load Price Data
     df_price = pd.read_csv(processed_path)
     df_price['Date'] = pd.to_datetime(df_price['Date'])
+    # Explicitly reset index to guarantee integer mapping alignment for .iloc operations
+    df_price = df_price.reset_index(drop=True)
     
     # Load Anomaly Targets
     df_targets = pd.read_csv(targets_path)
@@ -56,23 +57,19 @@ def plot_anomalies(symbol, forward_window=20):
     ax2.set_ylabel("Volume")
     ax2.grid(True, linestyle='--', alpha=0.5000)
 
-    # Tracking labels to avoid duplicating them in the chart legend
-    added_verified_legend = False
-    added_unverified_legend = False
-
     # Overlay the Anomalies with Look-Ahead Validation
     for _, row in stock_anomalies.iterrows():
         anomaly_date = row['Date']
         score = float(row['Anomaly_Score'])
         
-        # Determine index to calculate forward window
-        try:
-            idx = df_price[df_price['Date'] == anomaly_date].index[0]
-        except IndexError:
+        matching_rows = df_price[df_price['Date'] == anomaly_date]
+        if matching_rows.empty:
             continue
             
-        # Extract the look-ahead window
-        forward_df = df_price.iloc[idx : idx + forward_window]
+        idx_pos = matching_rows.index[0]
+        
+        # Extract the exact sequential look-ahead window
+        forward_df = df_price.iloc[idx_pos : idx_pos + forward_window]
         
         if len(forward_df) < 2:
             continue
@@ -84,30 +81,26 @@ def plot_anomalies(symbol, forward_window=20):
         # Mathematical verification threshold (-15.0000%)
         is_verified = max_dump_pct < -0.1500
         
-        # Dynamic color assigning
         if is_verified:
             marker_color = 'green'
-            label_text = 'Verified Anomaly (Crash > 15%)' if not added_verified_legend else ""
-            added_verified_legend = True
             status = "[VERIFIED]"
         else:
             marker_color = 'red'
-            label_text = 'Unverified Anomaly' if not added_unverified_legend else ""
-            added_unverified_legend = True
             status = "[UNVERIFIED]"
 
-        # Plot vertical dashed lines across both charts
-        ax1.axvline(x=anomaly_date, color=marker_color, linestyle='--', linewidth=1.8000, alpha=0.7000, label=label_text)
+        # Plot vertical dashed lines across both subplots without adding messy tracking labels inside the loop
+        ax1.axvline(x=anomaly_date, color=marker_color, linestyle='--', linewidth=1.8000, alpha=0.7000)
         ax2.axvline(x=anomaly_date, color=marker_color, linestyle='--', linewidth=1.8000, alpha=0.7000)
         
-        # Add prominent marker on the exact price point
-        try:
-            exact_price = df_price.loc[df_price['Date'] == anomaly_date, 'Close'].values[0]
-            ax1.plot(anomaly_date, exact_price, marker='v', color=marker_color, markersize=10.0000)
-        except IndexError:
-            pass 
+        # Add a clear marker on the exact coordinate on the asset price series
+        exact_price = matching_rows['Close'].values[0]
+        ax1.plot(anomaly_date, exact_price, marker='v', color=marker_color, markersize=10.0000)
             
         print(f"    {status} Date: {anomaly_date.strftime('%Y-%m-%d')} | Score: {score:.4f} | Max Drawdown: {(max_dump_pct * 100.0000):.4f}%")
+
+    # Construct clean proxy lines for the legend layout to ensure clear legend rendering
+    ax1.plot([], [], color='green', linestyle='--', linewidth=1.8000, label='Verified Anomaly (Crash > 15%)')
+    ax1.plot([], [], color='red', linestyle='--', linewidth=1.8000, label='Unverified Anomaly')
 
     ax1.legend(loc="upper left")
     ax2.legend(loc="upper left")
@@ -120,9 +113,8 @@ def plot_multiple_anomalies(symbols, forward_window=20):
         plot_anomalies(symbol, forward_window)
 
 if __name__ == "__main__":
-    # Input your array of names here
     target_tickers = [
         "EUROTEXIND_NS"
     ]
     
-    plot_multiple_anomalies(target_tickers, forward_window=20)
+    plot_multiple_anomalies(target_tickers, forward_window=20)  

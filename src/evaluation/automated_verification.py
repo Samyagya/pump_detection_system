@@ -1,4 +1,3 @@
-# namespace std;
 import os
 import pandas as pd
 import warnings
@@ -15,6 +14,8 @@ def verify_single_stock(symbol, forward_window=20):
         
     df_price = pd.read_csv(processed_path)
     df_price['Date'] = pd.to_datetime(df_price['Date'])
+    # Explicitly reset index to ensure integer sequence positions match index labels perfectly
+    df_price = df_price.reset_index(drop=True)
     
     df_targets = pd.read_csv(targets_path)
     stock_anomalies = df_targets[df_targets['Symbol'] == symbol].copy()
@@ -35,16 +36,17 @@ def verify_single_stock(symbol, forward_window=20):
     for _, row in stock_anomalies.iterrows():
         anomaly_date = row['Date']
         score = float(row['Anomaly_Score'])
-        total_flags += 1.0000
         
-        # Find the index of the anomaly date in the real price data
-        try:
-            idx = df_price[df_price['Date'] == anomaly_date].index[0]
-        except IndexError:
+        matching_rows = df_price[df_price['Date'] == anomaly_date]
+        if matching_rows.empty:
             continue
             
-        # Slice exactly N days into the future from the flag
-        forward_df = df_price.iloc[idx : idx + forward_window]
+        # Safe positional mapping from clean sequentially aligned index
+        idx_pos = matching_rows.index[0]
+        total_flags += 1.0000
+        
+        # Slice exactly N days into the future from the flag position
+        forward_df = df_price.iloc[idx_pos : idx_pos + forward_window]
         
         if len(forward_df) < 2:
             print(f"    [SKIP] Not enough forward data for {anomaly_date.strftime('%Y-%m-%d')}")
@@ -58,8 +60,7 @@ def verify_single_stock(symbol, forward_window=20):
         max_pump_pct = (peak_price - entry_price) / entry_price
         max_dump_pct = (trough_price - peak_price) / peak_price
         
-        # Verification Threshold: Was there a catastrophic dump?
-        # We define a "verified crash" as anything worse than -15.0000%
+        # Verification Threshold Evaluation
         is_verified = max_dump_pct < -0.1500
         
         if is_verified:
@@ -84,7 +85,6 @@ def verify_multiple_stocks(symbols, forward_window=20):
         verify_single_stock(symbol, forward_window)
 
 if __name__ == "__main__":
-    # Input your array of names here
     target_tickers = [
         "EUROTEXIND_NS"
     ]

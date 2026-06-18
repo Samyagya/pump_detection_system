@@ -6,9 +6,6 @@ import warnings
 # Suppress pandas fragmentation and rolling calculation warnings
 warnings.filterwarnings('ignore')
 
-
-# Calculated gini coefficient - volume inequality measure over a rolling period of time, closer to 1 means volume concentration -> manipulation 
-
 def calculate_gini(v):
     v = np.sort(v)
     n = len(v)
@@ -17,65 +14,55 @@ def calculate_gini(v):
     index = np.arange(1, n + 1)
     return (np.sum((2 * index - n - 1) * v)) / (n * np.sum(v))
 
-
-# Calculates the other features
 def calculate_optimized_features(df):
-    # 1. Daily Logarithmic Return -> basic
+    # 1. Daily Logarithmic Return
     df['Log_Return'] = np.log(df['Close'] / df['Close'].shift(1))
     
-    # 2. Volume Shock Ratio (20-Day) -> activity signa
+    # 2. Volume Shock Ratio (20-Day)
     df['Vol_MA20'] = df['Volume'].rolling(window=20).mean()
     df['Vol_Shock_Ratio'] = df['Volume'] / (df['Vol_MA20'] + 1e-9)
     
-    # 3. Normalized High-Low Spread -> intraday
+    # 3. Normalized High-Low Spread
     df['Norm_Spread'] = (df['High'] - df['Low']) / df['Close']
     
-    # 4. Amihud Illiquidity Ratio -> price impact per unit of volume
+    # 4. Amihud Illiquidity Ratio
     df['Rupee_Volume'] = df['Close'] * df['Volume']
     df['Amihud_Ratio'] = df['Log_Return'].abs() / (df['Rupee_Volume'] + 1e-9)
     
-    # 5. Delivery-Volume Divergence -> wash trading check
+    # 5. Delivery-Volume Divergence
     df['Delivery_Divergence'] = df['Vol_Shock_Ratio'] * (1.0000 - df['Delivery_Percentage'])
     
-    # 6. Volatility Squeeze (10D vs 90D) -> conpares
+    # 6. Volatility Squeeze (10D vs 90D)
     df['Vol_10D'] = df['Log_Return'].rolling(window=10).std()
     df['Vol_90D'] = df['Log_Return'].rolling(window=90).std()
     df['Volatility_Squeeze'] = df['Vol_10D'] / (df['Vol_90D'] + 1e-9)
     
-    # 7. Consecutive Positive Streak -> how many continuous days the stock climbed
+    # 7. Consecutive Positive Streak
     is_positive = (df['Log_Return'] > 0.0000).astype(int)
-    # Blocks increment every time we hit a day that is NOT positive
     blocks = (~(df['Log_Return'] > 0.0000)).cumsum()
     df['Positive_Streak'] = is_positive.groupby(blocks).cumsum()
     
-    # 8. Rolling Return Skewness (20-Day) -> measures asymetry
+    # 8. Rolling Return Skewness (20-Day)
     df['Return_Skewness'] = df['Log_Return'].rolling(window=20).skew()
     
-    # 9. Gap-Up Momentum -> overnight changes
+    # 9. Gap-Up Momentum
     df['Gap_Up_Momentum'] = (df['Open'] - df['Close'].shift(1)) / df['Close'].shift(1)
     
-    # 10. Volume Gini Coefficient (20-Day) -> feeds data to gini calculator
+    # 10. Volume Gini Coefficient (20-Day)
     df['Volume_Gini_20D'] = df['Volume'].rolling(window=20).apply(calculate_gini, raw=True)
     
     # 11. The Hidden Accumulation: OBV Acceleration
-
-    # Calculate daily OBV flow
     obv_flow = np.sign(df['Log_Return']) * df['Volume']
     df['OBV'] = obv_flow.cumsum()
-    # Calculate acceleration (Z-score of OBV)
     df['OBV_MA20'] = df['OBV'].rolling(window=20).mean()
     df['OBV_Std20'] = df['OBV'].rolling(window=20).std()
     df['OBV_Acceleration'] = (df['OBV'] - df['OBV_MA20']) / (df['OBV_Std20'] + 1e-9)
 
-
-    # VALIDATION TARGET (For Optuna Only)
-
+    # VALIDATION TARGET (For Optuna Tuning)
     df['Forward_Min_20D'] = df['Close'].shift(-20).rolling(window=20).min()
     df['Max_Drawdown_20D'] = df['Forward_Min_20D'] / df['Close'] - 1.0000
 
     # CLEANUP & FORMATTING
-
-    # Define the exact columns to keep
     features_to_keep = [
         'Date', 'Close', 'Log_Return', 'Vol_Shock_Ratio', 'Norm_Spread', 
         'Amihud_Ratio', 'Delivery_Divergence', 'Volatility_Squeeze', 
@@ -84,7 +71,7 @@ def calculate_optimized_features(df):
     ]
     df = df[features_to_keep].copy()
     
-    # Drop rows with NaNs (The first 90 days will drop due to Volatility Squeeze)
+    # Drop rows with NaNs (First 90 days drop due to Volatility Squeeze calculation)
     df = df.dropna().reset_index(drop=True)
     
     # Enforce strict 4-decimal formatting for all numerical outputs
@@ -92,7 +79,6 @@ def calculate_optimized_features(df):
         if col not in ['Date', 'Positive_Streak']:
             df[col] = df[col].apply(lambda x: f"{float(x):.4f}")
         elif col == 'Positive_Streak':
-            # Keep streak as a clean float with 4 decimal places for matrix consistency
             df[col] = df[col].apply(lambda x: f"{float(x):.4f}")
             
     return df
@@ -113,15 +99,12 @@ def main():
             filepath = os.path.join(cleaned_dir, filename)
             df = pd.read_csv(filepath)
             
-            # Ensure proper typing before calculations
             for col in ['Open', 'High', 'Low', 'Close', 'Volume', 'Delivery_Percentage']:
                 if col in df.columns:
                     df[col] = df[col].astype(float)
             
-            # Execute feature engineering
             df_features = calculate_optimized_features(df)
             
-            # Output to features directory
             safe_out_name = filename.replace("_cleaned", "_features")
             out_path = os.path.join(features_dir, safe_out_name)
             df_features.to_csv(out_path, index=False)

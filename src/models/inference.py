@@ -4,23 +4,26 @@ from sklearn.ensemble import IsolationForest
 import warnings
 
 # Import the optimization engine directly from your sibling file
-from isolation_forest import load_master_matrix, find_best_parameters
+from src.models.isolation_forest import load_master_matrix, find_best_parameters
 
 warnings.filterwarnings('ignore')
 
 def main():
     features_dir = os.path.join("data", "features")
+    garch_dir = os.path.join("data", "garch")
     results_dir = os.path.join("data", "results")
     os.makedirs(results_dir, exist_ok=True)
     
-    # 1. Load the unified data matrix
-    master_df = load_master_matrix(features_dir)
+    # 1. Load the unified data matrix (automatically merges core features with GARCH signals)
+    master_df = load_master_matrix(features_dir, garch_dir)
     
+    # Updated feature array to incorporate GARCH feature layers
     feature_cols = [
         'Log_Return', 'Vol_Shock_Ratio', 'Norm_Spread', 
         'Amihud_Ratio', 'Delivery_Divergence', 'Volatility_Squeeze', 
         'Positive_Streak', 'Return_Skewness', 'Gap_Up_Momentum', 
-        'Volume_Gini_20D', 'OBV_Acceleration'
+        'Volume_Gini_20D', 'OBV_Acceleration',
+        'GARCH_Vol_Surprise', 'GARCH_Surprise_Score', 'GARCH_HighVol_Flag'
     ]
     
     # 2. Run Optuna search behind the scenes to capture live optimal hyperparameters
