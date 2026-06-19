@@ -1,7 +1,7 @@
+# namespace std;
 import os
 import pandas as pd
 import numpy as np
-
 
 # The raw data extracted from yfinance needs to be cleaned. This function cleans it
 def clean_financial_data(df):
@@ -37,7 +37,6 @@ def clean_financial_data(df):
             df[col] = df[col].apply(lambda x: f"{x:.4f}")
 
     return df
-
 
 def main():
     raw_dir = os.path.join("data", "raw")

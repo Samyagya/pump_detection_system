@@ -1,3 +1,4 @@
+# namespace std;
 """
 garch_features.py
 =================
@@ -146,7 +147,8 @@ def compute_garch_features(df: pd.DataFrame, returns: pd.Series, forecasts: pd.D
     return out
 
 def process_stock(ohlcv_path: Path, output_dir: Path, min_rows: int, skip_log: list) -> bool:
-    ticker = ohlcv_path.stem
+    # Safely strip out the "_cleaned" suffix to ensure perfect downstream merging
+    ticker = ohlcv_path.stem.replace("_cleaned", "")
     log.info(f"Processing {ticker} ...")
 
     df = load_ohlcv(ohlcv_path)

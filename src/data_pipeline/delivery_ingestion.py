@@ -30,7 +30,7 @@ def fetch_nse_delivery(symbol_with_ns, min_date, max_date):
             print(f"    [WARNING] NSE returned empty data for {clean_symbol}. Skipping.")
             return pd.DataFrame()
             
-        # UPDATE: Looking for 'DELIVERY %' instead of '%Deliverble'
+        # Looking for 'DELIVERY %' instead of '%Deliverble'
         if 'DATE' not in df_nse.columns or 'DELIVERY %' not in df_nse.columns:
             print(f"    [WARNING] Missing expected columns for {clean_symbol}. Found: {list(df_nse.columns)}")
             return pd.DataFrame()
@@ -52,6 +52,7 @@ def replace_mocked_delivery():
     """
     Loops through the existing OHLCV dataset, downloads the real delivery data, 
     and perfectly merges it with the Yahoo Finance price data.
+    Ensures missing NSE data is safely neutralized to prevent downstream crashes.
     """
     processed_dir = os.path.join("data", "processed")
     total_files = len([f for f in os.listdir(processed_dir) if f.endswith("_cleaned.csv")])
@@ -75,28 +76,34 @@ def replace_mocked_delivery():
             # Fetch the real delivery data
             df_delivery = fetch_nse_delivery(symbol, min_date, max_date)
             
+            # Convert Yahoo Finance dates back to string for a clean merge
+            df_yfinance['Date'] = df_yfinance['Date'].dt.strftime('%Y-%m-%d')
+            
+            # Drop any lingering Delivery_Percentage to avoid column duplication (_x, _y)
+            if 'Delivery_Percentage' in df_yfinance.columns:
+                df_yfinance = df_yfinance.drop(columns=['Delivery_Percentage'])
+            
             if not df_delivery.empty:
-                # Convert Yahoo Finance dates back to string for a clean merge
-                df_yfinance['Date'] = df_yfinance['Date'].dt.strftime('%Y-%m-%d')
-                
-                # Drop the mocked 'Delivery_Percentage' column you generated earlier
-                if 'Delivery_Percentage' in df_yfinance.columns:
-                    df_yfinance = df_yfinance.drop(columns=['Delivery_Percentage'])
-                
                 # Merge the real NSE delivery data onto the Yahoo Finance OHLCV data
                 df_merged = pd.merge(df_yfinance, df_delivery, on='Date', how='left')
                 
-                # Forward-fill any NaN delivery values caused by API glitches or missing NSE data,
-                # then enforce strictly 4 decimal places
+                # Forward-fill missing patches, then fill total voids with 0.0000
                 df_merged['Delivery_Percentage'] = df_merged['Delivery_Percentage'].ffill()
-                df_merged['Delivery_Percentage'] = df_merged['Delivery_Percentage'].apply(lambda x: f"{float(x):.4f}")
+                df_merged['Delivery_Percentage'] = df_merged['Delivery_Percentage'].fillna(0.0000)
+            else:
+                # The fallback safety net: neutral 0.0000 values
+                df_merged = df_yfinance.copy()
+                df_merged['Delivery_Percentage'] = 0.0000
                 
-                # Overwrite the file with the real data
-                df_merged.to_csv(filepath, index=False)
-                processed_count += 1.0000
+            # Enforce strictly 4 decimal places
+            df_merged['Delivery_Percentage'] = df_merged['Delivery_Percentage'].apply(lambda x: f"{float(x):.4f}")
             
-            # Sleep briefly to avoid overwhelming the NSE servers and getting IP banned
-            time.sleep(1.5000)
+            # Overwrite the file with the finalized data matrix
+            df_merged.to_csv(filepath, index=False)
+            processed_count += 1.0000
+            
+            # Sleep longer to safely glide past NSE rate limits for the 400-stock pull
+            time.sleep(3.0000)
 
     print("\n" + "="*60)
     print("DELIVERY DATA INJECTION COMPLETE")

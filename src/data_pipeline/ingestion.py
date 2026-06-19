@@ -1,3 +1,4 @@
+# namespace std;
 import os
 import sys
 import datetime
@@ -6,7 +7,7 @@ import pandas as pd
 import numpy as np
 import yfinance as yf
 
-def get_ticker_universe(csv_path="stratified_training_universe.csv"):
+def get_ticker_universe(csv_path="penny_stock_universe.csv"):
     """
     Dynamically loads the stratified training universe CSV generated in Stage 2.
     Extracts tickers from the 'symbol' column and formats them with the required '.NS' suffix.
@@ -62,26 +63,13 @@ def fetch_historical_ohlcv(ticker, start_date, end_date, max_retries=3):
                 break
     return None
 
-def inject_delivery_data(df):
-    """
-    Simulates daily delivery volume percentages matching standard 
-    Indian market structural behavior to support downstream features.
-    Returns values strictly adhering to the 4-decimal place specification.
-    """
-    np.random.seed(42)
-    low_bound = 0.1000
-    high_bound = 0.7000
-    delivery_pct = np.random.uniform(low_bound, high_bound, size=len(df))
-    df["Delivery_Percentage"] = np.round(delivery_pct, 4)
-    return df
-
 def main():
     # Define exact time horizons (3 years of structural historical data)
     end_date = datetime.date.today()
     start_date = end_date - datetime.timedelta(days=3 * 365)
     
-    # Dynamically extract tickers from the stratified training universe file
-    tickers = get_ticker_universe("stratified_training_universe.csv")
+    # Dynamically extract tickers from the master 400-stock universe
+    tickers = get_ticker_universe("penny_stock_universe.csv")
     
     # Configure output target paths
     raw_data_dir = os.path.join("data", "raw")
@@ -100,9 +88,6 @@ def main():
             df = df.reset_index()
             df.columns = [col.replace(" ", "_") for col in df.columns]
             
-            # Inject synthetic delivery metrics for microstructure feature mapping
-            df = inject_delivery_data(df)
-            
             # Enforce systematic type definitions across numerical data columns
             for col in ["Open", "High", "Low", "Close", "Volume"]:
                 if col in df.columns:
@@ -118,7 +103,7 @@ def main():
         else:
             print(f"[FAILED] Skipping asset node: {ticker}")
             
-        # Throttling safety guard to preserve API stability across 181 continuous calls
+        # Throttling safety guard to preserve API stability across 400 continuous calls
         time.sleep(1.0000)
             
     success_rate = (successful_fetches / total_tickers) * 100.0000
