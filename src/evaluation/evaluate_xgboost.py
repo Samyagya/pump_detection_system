@@ -60,19 +60,14 @@ def evaluate_predictions(preds_dir: Path, threshold: float = -2.0000):
     master_df = pd.concat(df_list, ignore_index=True)
     log.info(f"Successfully aggregated {float(len(df_list)):.4f} valid stock datasets. (Skipped {skipped_files:.4f} stale files).")
     
-    # ---------------------------------------------------------
     # 1. REGRESSION METRICS (How close were the raw numbers?)
-    # ---------------------------------------------------------
     actuals = master_df['Actual_IF_Score'].astype(float)
     preds = master_df['Predicted_IF_Score'].astype(float)
     
     mae = mean_absolute_error(actuals, preds)
     rmse = np.sqrt(mean_squared_error(actuals, preds))
-    
-    # ---------------------------------------------------------
-    # 2. CLASSIFICATION METRICS (Did we catch the anomalies?)
-    # ---------------------------------------------------------
-    # Ground Truth: Was the actual day highly anomalous?
+
+    # 2. CLASSIFICATION METRICS (Did we catch the anomalies?) Ground Truth: Was the actual day highly anomalous?
     master_df['Actual_Pump'] = (actuals <= threshold).astype(int)
     
     # Model Signal: Did the model's Residual "Surprise" drop below threshold?
@@ -88,9 +83,7 @@ def evaluate_predictions(preds_dir: Path, threshold: float = -2.0000):
     
     cm = confusion_matrix(y_true, y_pred)
     
-    # ---------------------------------------------------------
-    # 3. PRINT THE INSTITUTIONAL REPORT
-    # ---------------------------------------------------------
+
     print("\n" + "="*50)
     print(f"XGBOOST WALK-FORWARD EVALUATION REPORT")
     print(f"Total Trading Rows Evaluated : {float(len(master_df)):.4f}")

@@ -18,11 +18,8 @@ logging.basicConfig(
 )
 log = logging.getLogger(__name__)
 
+# main problem is the "amnesia" of XGBoost - it only sees the current row, not the historical context. We can fix that by creating lagged features that represent the past few days of data. This way, XGBoost can learn from the temporal patterns in the data. So  T-0 (current day) to T-N (N days ago) columns for every feature. This is the "flattening" process that gives XGBoost its memory and allows it to make informed predictions based on historical trends.
 def create_flattened_dataset(df: pd.DataFrame, target_col: str, lookback_days: int = 5) -> pd.DataFrame:
-    """
-    Cures XGBoost's amnesia by shifting historical data into flat columns.
-    Creates T-0 to T-N columns for every mathematical feature.
-    """
     df_flat = df[['Date']].copy()
     
     # Identify the features (everything except Date, Ticker/Symbol, and the Target IF Score)
@@ -42,11 +39,9 @@ def create_flattened_dataset(df: pd.DataFrame, target_col: str, lookback_days: i
     df_flat = df_flat.dropna().reset_index(drop=True)
     return df_flat
 
+
+# impllement the daily train-predict-expand loop. Rebuild the XGBoost decision trees from scratch every single day. This is the "walk-forward" approach that simulates how the model would perform in a real-world scenario, where it only has access to past data when making predictions for the next day.
 def run_walk_forward_xgboost(df_flat: pd.DataFrame, min_train_days: int = 90) -> pd.DataFrame:
-    """
-    Executes the daily train-predict-expand loop.
-    Rebuilds the XGBoost decision trees from scratch every single day.
-    """
     feature_cols = [c for c in df_flat.columns if c not in ['Date', 'Target_Tomorrow']]
     
     predictions = []
@@ -57,7 +52,7 @@ def run_walk_forward_xgboost(df_flat: pd.DataFrame, min_train_days: int = 90) ->
     model = xgb.XGBRegressor(
         n_estimators=100, 
         learning_rate=0.1, 
-        max_depth=3, 
+        max_depth=3, # shallow trees to prevent overfitting on small training sets
         random_state=42,
         n_jobs=-1
     )
@@ -87,7 +82,6 @@ def run_walk_forward_xgboost(df_flat: pd.DataFrame, min_train_days: int = 90) ->
     
     results_df['Residual_Delta'] = results_df['Actual_IF_Score'] - results_df['Predicted_IF_Score']
     
-    # Enforce strictly 4 decimal places
     for col in ['Actual_IF_Score', 'Predicted_IF_Score', 'Residual_Delta']:
         results_df[col] = results_df[col].apply(lambda x: f"{float(x):.4f}")
         
