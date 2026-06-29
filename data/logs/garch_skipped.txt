@@ -1,0 +1,2 @@
+BCPL_NS	only 57 rows (need 60)
+SINGERIND_NS	GARCH produced zero valid forecasts

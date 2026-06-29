@@ -8,3 +8,9 @@ scikit-learn
 streamlit
 plotly
 telethon
+optuna
+requests
+arch
+matplotlib
+jugaad-data
+xgboost
