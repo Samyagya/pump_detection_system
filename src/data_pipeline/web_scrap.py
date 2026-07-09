@@ -1,5 +1,6 @@
 from newspaper import build, Article
 import pandas as pd
+import os
 
 paper = build(
     "https://www.moneycontrol.com/news/business/"
